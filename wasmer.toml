@@ -1,0 +1,21 @@
+[package]
+name = "shinnmm6/uploader"
+version = "0.1.0"
+description = "A privacy-friendly static file inspector for Wasmer Edge"
+readme = "README.md"
+repository = "https://github.com/Shinnmm6/uploader"
+
+[dependencies]
+"wasmer/static-web-server" = "^1"
+
+[fs]
+"/public" = "."
+"/settings" = "settings"
+
+[[command]]
+name = "script"
+module = "wasmer/static-web-server:webserver"
+runner = "https://webc.org/runner/wasi"
+
+[command.annotations.wasi]
+main-args = ["-w", "/settings/config.toml"]
