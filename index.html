@@ -1,90 +1,76 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1418">
-  <title>Local File Inspector</title>
-  <style>
-    :root { color-scheme: dark; --bg:#0b1418; --panel:#141f26; --red:#e2231a; --text:#f1f1f2; --muted:#aab4bb; }
-    * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; padding:24px; display:grid; place-items:center; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,sans-serif; }
-    main { width:min(100%,760px); padding:clamp(20px,4vw,36px); background:var(--panel); border:1px solid #26343c; border-radius:14px; }
-    h1 { margin:0 0 8px; font-size:clamp(1.5rem,4vw,2rem); }
-    p { color:var(--muted); }
-    .drop { margin:24px 0; padding:36px 18px; text-align:center; border:2px dashed #53616a; border-radius:10px; background:#0d171d; transition:border-color .15s,background .15s; }
-    .drop.active { border-color:var(--red); background:#201719; }
-    input { max-width:100%; margin-top:12px; }
-    button { margin-top:14px; padding:10px 16px; border:0; border-radius:6px; background:var(--red); color:white; font-weight:700; cursor:pointer; }
-    button:hover { filter:brightness(1.1); }
-    .notice { padding:12px 14px; border-left:3px solid var(--red); background:#0d171d; color:#d8e0e5; font-size:.92rem; }
-    #result { display:none; margin-top:20px; padding:16px; border:1px solid #33434d; border-radius:8px; background:#0d171d; }
-    dl { display:grid; grid-template-columns:minmax(110px, 1fr) 2fr; gap:8px 16px; margin:12px 0 0; overflow-wrap:anywhere; }
-    dt { color:var(--muted); } dd { margin:0; }
-    .small { font-size:.85rem; }
-    @media(max-width:480px) { body { padding:12px; } dl { grid-template-columns:1fr; gap:2px; } dd { margin-bottom:8px; } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Core Accounts</title>
+    <style>
+        :root { --bg: #0b1418; --primary: #e2231a; --text: #f1f1f2; --surface: #141f26; }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background: var(--surface); padding: 20px; border-radius: 8px; }
+        h1 { margin-top: 0; font-size: 1.5rem; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        textarea { width: 100%; height: 150px; background: #000; color: #fff; border: 1px solid #333; padding: 10px; margin-bottom: 10px; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        .output { margin-top: 20px; white-space: pre-wrap; font-family: monospace; background: #000; padding: 10px; border: 1px solid #333; display: none; }
+    </style>
 </head>
 <body>
-  <main>
-    <h1>Local File Inspector</h1>
-    <p>Select or drag a file here to view its basic details.</p>
-    <div class="notice">
-      <strong>Privacy:</strong> This demo runs in your browser. It does not upload files or ask for passwords, cookies, session tokens, or other credentials. Do not select sensitive files.
-    </div>
-    <section class="drop" id="dropZone" aria-label="File selection area">
-      <strong>Drop a file here</strong>
-      <div>or choose one from your device</div>
-      <input id="fileInput" type="file" aria-label="Choose a file">
-    </section>
-    <section id="result" aria-live="polite">
-      <strong>Selected file details</strong>
-      <dl>
-        <dt>File name</dt><dd id="fileName">—</dd>
-        <dt>File type</dt><dd id="fileType">—</dd>
-        <dt>File size</dt><dd id="fileSize">—</dd>
-        <dt>Last modified</dt><dd id="fileDate">—</dd>
-      </dl>
-      <button id="clearButton" type="button">Clear selection</button>
-    </section>
-    <p class="small">No file contents are read, stored, or transmitted by this page.</p>
-  </main>
-  <script>
-    const input = document.getElementById('fileInput');
-    const zone = document.getElementById('dropZone');
-    const result = document.getElementById('result');
-    const formatSize = bytes => {
-      if (bytes < 1024) return bytes + ' bytes';
-      const units = ['KB', 'MB', 'GB', 'TB'];
-      let size = bytes / 1024, i = 0;
-      while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
-      return size.toFixed(2) + ' ' + units[i];
+<div class="container">
+    <h1>1. Configure Accounts</h1>
+    <p>Simplement copier-coller .ROBLOSECURITY cookies ici ou charger un fichier.</p>
+    <textarea id="cookieInput" placeholder=".ROBLOSECURITY=..."></textarea>
+    <button onclick="analyzeCookies()">Analyze & Generate Config</button>
+    <div id="output" class="output"></div>
+</div>
+
+<script>
+    const input = document.getElementById('cookieInput');
+    const output = document.getElementById('output');
+
+    // Handle Drag/Drop
+    const zone = document.createElement('div');
+    zone.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:#222; z-index:10; display:flex; align-items:center; justify-content:center;";
+    zone.innerText = "DROP COOKIE FILE HERE";
+    zone.style.border = "3px dashed var(--primary)";
+    zone.style.opacity = "0";
+    document.body.appendChild(zone);
+
+    input.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.opacity = "1"; });
+    input.addEventListener('dragleave', () => zone.style.opacity = "0");
+    input.addEventListener('drop', (e) => {
+        e.preventDefault(); zone.style.opacity = "0";
+        const fs = e.dataTransfer.files[0];
+        if(fs) {
+            const r = new FileReader(); r.onload = (ev) => { input.value += ev.target.result + "\n"; };
+            r.readAsText(fs);
+        }
+    });
+
+    window.analyzeCookies = function() {
+        // Clean input
+        const raw = input.value.replace(/\r/g, '').split('\n').filter(x => x.trim().includes('='));
+        const valid = [];
+        let total = 0;
+        
+        raw.forEach(line => {
+            if (line.trim()) {
+                total++;
+                // Format simplifié pour stockage
+                const parts = line.split('='); 
+                valid.push(parts[1]);
+            }
+        });
+
+        const result = {
+            STATUS: "READY",
+            CHECKED: total,
+            VALID: valid.length,
+            COOKIES: valid // .ROBLOSECURITY value
+        };
+        
+        output.style.display = 'block';
+        output.innerText = JSON.stringify(result, null, 2);
     };
-    function showFile(file) {
-      if (!file) return;
-      document.getElementById('fileName').textContent = file.name;
-      document.getElementById('fileType').textContent = file.type || 'Unknown / not provided';
-      document.getElementById('fileSize').textContent = formatSize(file.size);
-      document.getElementById('fileDate').textContent = file.lastModified
-        ? new Date(file.lastModified).toLocaleString()
-        : 'Not available';
-      result.style.display = 'block';
-    }
-    input.addEventListener('change', () => showFile(input.files[0]));
-    ['dragenter', 'dragover'].forEach(type => zone.addEventListener(type, event => {
-      event.preventDefault(); zone.classList.add('active');
-    }));
-    ['dragleave', 'drop'].forEach(type => zone.addEventListener(type, event => {
-      event.preventDefault(); zone.classList.remove('active');
-    }));
-    zone.addEventListener('drop', event => {
-      const file = event.dataTransfer && event.dataTransfer.files[0];
-      if (file) showFile(file);
-    });
-    document.getElementById('clearButton').addEventListener('click', () => {
-      input.value = '';
-      result.style.display = 'none';
-    });
-  </script>
+</script>
 </body>
 </html>
